@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>潮汕 2.5 天行程 · 揭阳进出</title>
+<meta name="description" content="揭阳 · 潮州 · 汕头 2.5 天行程地图，含美食与实测车程">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   Design System — edit :root to change theme
+   ═══════════════════════════════════════════ */
+:root {
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f5f5f7;
+  --bg-tertiary:   #fbfbfd;
+  --bg-grouped:    #f2f2f7;
+  --bg-elevated:   #ffffff;
+  --text-primary:   #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary:  #aeaeb2;
+  --accent:        #0071e3;
+  --accent-hover:  #0077ed;
+  --tint-red:    #ff3b30;
+  --tint-orange: #ff9500;
+  --tint-green:  #34c759;
+  --tint-blue:   #007aff;
+  --tint-purple: #af52de;
+  --tint-pink:   #ff2d55;
+  --separator:  rgba(60, 60, 67, .12);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:  0 4px 14px rgba(0,0,0,.08);
+  --shadow-lg:  0 8px 30px rgba(0,0,0,.12);
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+               "Helvetica Neue", "Arial", sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.47059;
+  letter-spacing: -0.022em;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Map ── */
+#map { width: 100%; height: 40vh; min-height: 280px; position: sticky; top: 0; z-index: 100; }
+.locate-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+  border: none; box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.locate-btn.active { color: #007aff; }
+@keyframes loc-pulse {
+  0%   { transform: scale(1); opacity: .55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.loc-pulse {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: rgba(0,122,255,.25);
+  animation: loc-pulse 1.6s ease-out infinite;
+}
+
+/* ── Tabs ── */
+.tabs {
+  display: flex; gap: 6px; padding: 12px 16px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  background: rgba(255,255,255,.85); -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px); position: sticky; top: 40vh; z-index: 99;
+  border-bottom: .5px solid var(--separator); scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex-shrink: 0; padding: 7px 16px; border-radius: 980px; border: none;
+  background: var(--bg-grouped); color: var(--text-secondary);
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: all .25s ease;
+  white-space: nowrap; letter-spacing: -0.01em;
+}
+.tab:active { transform: scale(.96); }
+.tab.active { background: var(--accent); color: #fff; }
+
+/* ── Main content ── */
+.content { max-width: 680px; margin: 0 auto; padding: 16px 16px calc(24px + var(--safe-bottom)); }
+
+/* ── Overview ── */
+.hero { text-align: center; padding: 28px 20px 20px; }
+.hero h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.15; }
+.hero .subtitle { font-size: 17px; color: var(--text-secondary); margin-top: 6px; font-weight: 400; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.info-card { background: var(--bg-elevated); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-sm); }
+.info-card .label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .02em; margin-bottom: 6px; }
+.info-card .value { font-size: 15px; font-weight: 600; line-height: 1.4; }
+
+/* ── Section headers ── */
+.section-head { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; padding: 20px 0 8px; }
+
+/* ── Day header ── */
+.day-head { padding: 20px 0 12px; }
+.day-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.day-head p { font-size: 15px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ── Route bar ── */
+.route-bar { background: var(--bg-elevated); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow-sm); font-size: 13px; color: var(--text-secondary); line-height: 1.7; white-space: pre-line; }
+.route-bar strong { color: var(--text-primary); }
+
+/* ── Timeline ── */
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 7px; top: 20px; bottom: 20px; width: 1.5px; background: var(--separator); }
+.tl-item { position: relative; margin-bottom: 10px; }
+.tl-dot { position: absolute; left: -20px; top: 18px; width: 10px; height: 10px; border-radius: 50%; z-index: 1; box-shadow: 0 0 0 3px var(--bg-secondary); }
+.tl-dot.food    { background: var(--tint-red); }
+.tl-dot.spot    { background: var(--tint-blue); }
+.tl-dot.hotel   { background: var(--tint-orange); }
+.tl-dot.drink   { background: var(--tint-purple); }
+.tl-dot.transport { background: var(--text-tertiary); }
+
+/* ── Card ── */
+.card { background: var(--bg-elevated); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow-sm); transition: box-shadow .25s ease; cursor: pointer; }
+.card:active { box-shadow: var(--shadow-md); }
+.card .time { font-size: 12px; font-weight: 600; color: var(--text-tertiary); letter-spacing: .01em; }
+.card .name { font-size: 17px; font-weight: 600; margin: 2px 0 4px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 6px; }
+.card .desc { font-size: 14px; color: var(--text-secondary); line-height: 1.45; }
+
+/* Badge */
+.badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; }
+.badge.food   { background: rgba(255,59,48,.1);  color: var(--tint-red); }
+.badge.spot   { background: rgba(0,122,255,.1);  color: var(--tint-blue); }
+.badge.drink  { background: rgba(175,82,222,.1); color: var(--tint-purple); }
+
+/* Budget */
+.budget { display: inline-block; margin-top: 6px; padding: 3px 10px; background: var(--bg-grouped); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+/* Payment */
+.pays { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+.pay { font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 600; }
+.pay.ok  { background: rgba(52,199,89,.1);  color: var(--tint-green); }
+.pay.no  { background: rgba(255,59,48,.08); color: var(--tint-red); }
+.pay.idk { background: rgba(255,149,0,.1);  color: var(--tint-orange); }
+
+/* Links row */
+.links { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 8px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+  text-decoration: none !important; transition: filter .2s;
+}
+.btn:active { filter: brightness(.9); }
+.btn.nav    { background: var(--accent); color: #fff; }
+.btn.xhs    { background: #ff2442; color: #fff; }
+.btn.dp     { background: #ffa700; color: #fff; }
+.btn.rsv    { background: var(--tint-green); color: #fff; }
+
+/* Action Sheet */
+.as-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.35); backdrop-filter: blur(2px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.as-overlay.show { opacity: 1; pointer-events: auto; }
+.as-sheet {
+  width: 100%; max-width: 420px;
+  padding: 0 8px 34px;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.22,1,.36,1);
+}
+.as-overlay.show .as-sheet { transform: translateY(0); }
+.as-group {
+  background: rgba(255,255,255,.88); backdrop-filter: blur(20px);
+  border-radius: 14px; overflow: hidden; margin-bottom: 8px;
+}
+.as-group .as-item {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 16px; font-size: 18px; color: #007aff; font-weight: 500;
+  border: none; background: none; width: 100%; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.as-group .as-item + .as-item { border-top: .5px solid rgba(0,0,0,.12); }
+.as-group .as-item:active { background: rgba(0,0,0,.06); }
+.as-cancel { font-weight: 600; }
+
+/* Details — default open */
+.details {
+  margin-top: 10px; padding-top: 10px;
+  border-top: .5px solid var(--separator);
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+}
+.details.closed { display: none; }
+
+/* ── Overview day list ── */
+.day-list .card { margin-bottom: 8px; }
+.day-list .card .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+/* ── Payment summary ── */
+.pay-summary { background: var(--bg-elevated); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: var(--shadow-sm); font-size: 13px; line-height: 1.7; margin-bottom: 10px; }
+.pay-summary h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.pay-summary .warn { color: var(--tint-red); }
+.pay-summary .ok-text { color: var(--tint-green); }
+
+/* ── Legend ── */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 8px 0; font-size: 12px; color: var(--text-secondary); }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── Leaflet overrides ── */
+.leaflet-popup-content-wrapper { border-radius: var(--radius-md) !important; box-shadow: var(--shadow-lg) !important; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif !important; }
+.leaflet-popup-content { font-size: 14px !important; line-height: 1.5 !important; margin: 12px 14px !important; }
+.leaflet-popup-content a { color: var(--accent) !important; }
+.leaflet-popup-tip { background: #fff !important; }
+.leaflet-control-zoom a { width: 34px !important; height: 34px !important; line-height: 34px !important; font-size: 16px !important; border-radius: 10px !important; background: rgba(255,255,255,.85) !important; -webkit-backdrop-filter: blur(10px) !important; backdrop-filter: blur(10px) !important; border: .5px solid var(--separator) !important; color: var(--text-primary) !important; }
+.leaflet-control-zoom { border-radius: 12px !important; overflow: hidden; box-shadow: var(--shadow-md) !important; border: none !important; }
+.leaflet-control-attribution { font-size: 9px !important; opacity: .5; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+<div class="tabs" id="tabs"></div>
+<div class="content" id="content"></div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  REPLACE THIS SECTION — Hotel and Days data                 ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+const HOTEL = { name: "揭阳城际酒店（榕城区临江北路宝德时代广场）", lat: 23.557736, lng: 116.390825 };
+
+const DAYS = [
+ {
+  "id": 0,
+  "label": "总览",
+  "color": "#0071e3",
+  "locations": []
+ },
+ {
+  "id": 1,
+  "label": "D0 今晚",
+  "date": "9/15 周二 · 20:55 落地",
+  "title": "抵达揭阳 · 直接入住",
+  "color": "#ff9500",
+  "locations": [
+   {
+    "name": "揭阳潮汕国际机场",
+    "lat": 23.547445,
+    "lng": 116.510049,
+    "type": "transport",
+    "time": "20:55",
+    "desc": "落地取行李（国内到达约 20–30 min）",
+    "detail": "⚠️ 机场大巴「揭阳古城线」只运营 08:30–15:30，晚间已收班。\n只能打车/网约车：19.6 km / 约 33 min / 约 60–90 元。\n出到达厅按「出租车/网约车」指示牌走。"
+   },
+   {
+    "name": "揭阳城际酒店（check-in）",
+    "lat": 23.557736,
+    "lng": 116.390825,
+    "type": "hotel",
+    "time": "21:45",
+    "desc": "榕城区临江北路宝德时代广场 · 揭阳楼广场旁",
+    "detail": "距进贤门 5.9 km / 16 min 车程；距潮州古城 34 km；距汕头小公园 43 km。\n门口就是榕江北河，晚上可沿江散步。"
+   },
+   {
+    "name": "揭阳楼广场 · 江边夜走",
+    "lat": 23.565836,
+    "lng": 116.392938,
+    "type": "spot",
+    "time": "22:15",
+    "desc": "酒店旁 1 km，散步消食；榕江音乐喷泉在市政府前榕江北河（主喷 188 m）",
+    "detail": "音乐喷泉当晚有无场次需现场确认（雨天通常停）。"
+   },
+   {
+    "name": "夜宵：宝德广场 / 临江北路",
+    "lat": 23.557736,
+    "lng": 116.390825,
+    "type": "food",
+    "time": "22:30",
+    "desc": "不想跑远就在酒店楼下解决；潮汕夜粥（白粥+杂咸+卤味）是当地夜宵标配",
+    "xhsKeyword": "潮州夜粥 杂咸"
+   }
+  ]
+ },
+ {
+  "id": 2,
+  "label": "D1 9/16",
+  "date": "9/16 周三 · 揭阳老城 + 潮州古城夜",
+  "title": "白天揭阳人文 · 晚上潮州看桥",
+  "color": "#0071e3",
+  "locations": [
+   {
+    "name": "进贤门城楼",
+    "lat": 23.534918,
+    "lng": 116.357822,
+    "type": "spot",
+    "time": "09:00",
+    "desc": "揭阳地标「谯楼晓角」，明天启元年三层八角攒尖顶；全天开放免票",
+    "detail": "本地升学、婚嫁、赴任都来此题名讨彩头。\n从酒店打车 5.9 km / 16 min（约 15–20 元）。"
+   },
+   {
+    "name": "揭阳学宫（孔庙）",
+    "lat": 23.535795,
+    "lng": 116.355961,
+    "type": "spot",
+    "time": "09:30",
+    "desc": "岭南最大孔庙、全国府县级孔庙规模第二 · 免费",
+    "detail": "⚠️ 开放 9:00–11:30 / 14:30–17:30，中午闭馆 —— 必须放在上午。\n宋绍兴十年（1140）建，周恩来东征革命活动旧址；紧邻进贤门（步行 4 min）。"
+   },
+   {
+    "name": "揭阳城隍庙",
+    "lat": 23.534571,
+    "lng": 116.355051,
+    "type": "spot",
+    "time": "10:20",
+    "desc": "明洪武二年（1369）· 广东省唯一国保城隍庙，粤东香火最旺",
+    "detail": "开放 7:00–17:30（初一/十五延至 22:00）；走去学宫约 3 min。"
+   },
+   {
+    "name": "双峰寺",
+    "lat": 23.531568,
+    "lng": 116.35527,
+    "type": "spot",
+    "time": "11:00",
+    "desc": "与潮州开元寺、潮阳灵山寺并称「潮郡三大名刹」，双峰晚钟",
+    "detail": "白天可进，夜景有灯；步行约 3 min。"
+   },
+   {
+    "name": "中山路骑楼老街 → 午餐",
+    "lat": 23.533087,
+    "lng": 116.353349,
+    "type": "food",
+    "time": "11:40",
+    "desc": "骑楼老街约 2000 m；午餐在老城解决（粿汁/粿条/肠粉/卤味/擂茶）",
+    "xhsKeyword": "揭阳中山路 骑楼 美食",
+    "detail": "揭阳小吃系统攻略少，跟着人多的摊走：揭阳粿汁、乒乓粿、普宁豆干、隆江猪脚饭、揭西擂茶。"
+   },
+   {
+    "name": "打铜街 → 石狮桥",
+    "lat": 23.536891,
+    "lng": 116.352409,
+    "type": "spot",
+    "time": "12:40",
+    "desc": "打铜街是《阿嬷的情书》取景地；石狮桥（明成化六年）正月「行彩桥」摸石狮讨彩头",
+    "detail": "中山路→打铜街步行约 10 min；打铜街→石狮桥约 7 min。"
+   },
+   {
+    "name": "榕江西湖公园",
+    "lat": 23.534185,
+    "lng": 116.344345,
+    "type": "spot",
+    "time": "13:20",
+    "desc": "九曲桥 + 双层湖心亭，2025-01-01 修缮重开；免费 · 06:00 起",
+    "detail": "石狮桥步行过来约 10 min。逛完打车回酒店取行李。"
+   },
+   {
+    "name": "回酒店取行李 → 出发潮州",
+    "lat": 23.557736,
+    "lng": 116.390825,
+    "type": "transport",
+    "time": "14:30",
+    "desc": "打车 34 km / 约 59 min / 约 90–130 元",
+    "detail": "也可从酒店叫网约车走汕汾高速。若行李已在车上可略过。"
+   },
+   {
+    "name": "潮州开元寺 + 牌坊街",
+    "lat": 23.663056,
+    "lng": 116.648963,
+    "type": "spot",
+    "time": "15:40",
+    "desc": "粤东第一古刹（唐）；牌坊街 23 座明清牌坊",
+    "detail": "地道小吃在牌坊街平行的义安路、昌黎路、西马路，比主街便宜且地道。"
+   },
+   {
+    "name": "广济桥（湘子桥）",
+    "lat": 23.662858,
+    "lng": 116.652732,
+    "type": "spot",
+    "time": "16:45",
+    "desc": "中国四大古桥 · 世界最早启闭式浮桥「十八梭船二十四洲」",
+    "budget": "门票约 20 元",
+    "detail": "⚠️ 三套时间窗：白天上桥 / 傍晚拆桥 / 夜里灯光秀，一天各只能看一次。\n上桥时间随季节，平日多 10:00–17:30、周末 9:00–17:30，以当日公告为准。"
+   },
+   {
+    "name": "韩江边看「拆浮桥」",
+    "lat": 23.662959,
+    "lng": 116.652241,
+    "type": "spot",
+    "time": "17:30",
+    "desc": "浮桥中段解缆散开让船通航，全过程约 15 min",
+    "detail": "⚠️ 冬季工作日约 16:30、周末与夏季约 17:30 开始 —— 提前 10 min 占江边位置。\n最佳机位：广济楼一侧的韩江滨江长廊。"
+   },
+   {
+    "name": "晚餐：牌坊街后巷",
+    "lat": 23.655635,
+    "lng": 116.648099,
+    "type": "food",
+    "time": "18:30",
+    "desc": "牛肉火锅 / 蚝烙 / 粿汁 / 肠粉 / 鱼生 / 卤鹅",
+    "xhsKeyword": "潮州牌坊街 后巷 美食",
+    "detail": "名字：老彬蚝烙（约 35 元）、双生肠粉、胡荣泉（百年，鸭母捻/春饼）、谢怀亮芝麻茶、官塘兄弟牛肉火锅、开元老七粿汁、阿荣砂锅粥、潮膳楼（鱼生/生腌）。"
+   },
+   {
+    "name": "广济桥灯光秀",
+    "lat": 23.662858,
+    "lng": 116.652732,
+    "type": "spot",
+    "time": "20:00",
+    "desc": "周一至周四仅 20:00 一场；周五至周日及法定节假日加开 21:30 · 每场约 10–15 min",
+    "detail": "免费，站位在滨江长廊和广济楼前；周三（9/16）只有 20:00 这一场。"
+   },
+   {
+    "name": "返揭阳（或改住潮州）",
+    "lat": 23.557736,
+    "lng": 116.390825,
+    "type": "transport",
+    "time": "20:40",
+    "desc": "打车回揭阳城际酒店：34 km / 约 59 min / 约 90–130 元",
+    "detail": "★ 省时方案：今晚改住潮州古城（推荐牌坊街附近），明早 30 min 就能到汕头方向，省掉今晚 + 明早两次 1 h 车程。\n若坚持住揭阳，建议 20:40 前上车，21:45 前后到店。"
+   }
+  ]
+ },
+ {
+  "id": 3,
+  "label": "D2 9/17",
+  "date": "9/17 周四 · 汕头老城 + 海景 → 返程",
+  "title": "汕头开埠区 · 镇邦路吃街 · 礐石",
+  "color": "#34c759",
+  "locations": [
+   {
+    "name": "出发汕头 · 小公园开埠区",
+    "lat": 23.355279,
+    "lng": 116.673951,
+    "type": "spot",
+    "time": "09:00",
+    "desc": "42.9 km / 约 67 min 车程（打车约 110–150 元）",
+    "detail": "也可高铁：潮汕站→汕头站约 25 min，再坐 2 路公交到「市总工会」站步行 5 min。\n小公园开埠区是 34 个开埠城市中唯一保存较完整的骑楼街区，免费。"
+   },
+   {
+    "name": "小公园中山纪念亭",
+    "lat": 23.355279,
+    "lng": 116.673951,
+    "type": "spot",
+    "time": "09:20",
+    "desc": "汕头地标「小公园亭」· 08:00–17:30",
+    "detail": "周边就是骑楼群核心。"
+   },
+   {
+    "name": "骑楼老街 + 西堤公园",
+    "lat": 23.349316,
+    "lng": 116.66873,
+    "type": "spot",
+    "time": "10:00",
+    "desc": "安平路 / 国平路 / 升平路 / 中山路 连片约 2000 m；西堤公园看内海湾",
+    "detail": "侨批文物馆、开埠文化陈列馆、汕头邮局旧址都在这一带。"
+   },
+   {
+    "name": "午餐：镇邦路美食街",
+    "lat": 23.349316,
+    "lng": 116.66873,
+    "type": "food",
+    "time": "11:45",
+    "desc": "120 m 骑楼小街：卤鹅、牛肉丸、蚝烙、肠粉、砂锅粥、鱼丸、双烹粽、落汤钱",
+    "xhsKeyword": "汕头镇邦路 美食",
+    "detail": "镇邦路是「一站式」吃街；周边可补：老妈宫粽球、镇平粿汁店、亚强果汁冰、广场老牌豆花甜汤。"
+   },
+   {
+    "name": "礐石风景区",
+    "lat": 23.33325,
+    "lng": 116.680789,
+    "type": "spot",
+    "time": "13:30",
+    "desc": "汕头八景之首；塔山+焰峰联票 15 元，缆车 10 元（节假日 15 元），约 9:00–17:00（16:30 停止入场）",
+    "budget": "联票 15 元 + 缆车 10 元",
+    "detail": "看点：飘然亭（鸡冠峰 92 m，明代摩崖「春潮八百里」）、垂虹洞。\n从小公园 6.6 km / 约 18 min。"
+   },
+   {
+    "name": "备选：达濠古城 + 海鲜大排档",
+    "lat": 23.279131,
+    "lng": 116.725596,
+    "type": "spot",
+    "time": "—",
+    "desc": "濠江区，顺路可吃达濠米润 / 酥糖 / 木斗蛋粿"
+   },
+   {
+    "name": "牛肉火锅（晚餐）",
+    "lat": 23.361658,
+    "lng": 116.69109,
+    "type": "food",
+    "time": "17:30",
+    "desc": "潮汕牛肉火锅：清汤底、薄切只涮 10–15 秒、蘸沙茶酱",
+    "xhsKeyword": "八合里海记牛肉店 汕头",
+    "detail": "候选：八合里海记（汕头总店，网红排队）、福合埕老胡牛肉、乌记、伟记。\n必点：五花趾、匙仁、吊龙、手打牛肉丸。"
+   },
+   {
+    "name": "赴揭阳潮汕机场",
+    "lat": 23.547445,
+    "lng": 116.510049,
+    "type": "transport",
+    "time": "19:00",
+    "desc": "39.6 km / 约 48 min（打车约 110–150 元）",
+    "detail": "若从潮汕站走：汕头小公园→潮汕站 36 km / 44 min；潮州古城→潮汕站 18.7 km / 39 min。\n建议国内航班提前 1.5 h 到机场。"
+   }
+  ]
+ },
+ {
+  "id": 4,
+  "label": "备选·砍掉",
+  "date": "备用方案与放弃清单",
+  "title": "想加什么 / 必须砍什么",
+  "color": "#af52de",
+  "locations": [
+   {
+    "name": "南澳岛（加它要砍一座城）",
+    "lat": 23.438086,
+    "lng": 117.135686,
+    "type": "spot",
+    "time": "—",
+    "desc": "广东省唯一海岛县：南澳大桥 11 km、过桥费 96 元/车（进岛单向）、环岛公路 68 km",
+    "xhsKeyword": "南澳岛 一日游",
+    "detail": "要整天。免费：青澳湾+北回归线标志塔自然之门、钱澳湾灯塔、蛏仔澎风车阵、三囱崖灯塔。\n收费：总兵府 20、宋井 20、金银岛 10、后花园 20、黄花山森林公园 20。\n⚠️ 节假日大桥排队 1–4 h，建议 9 点前上桥；上桥前加满油/电。\n若去：9/17 整天南澳 → 汕头老城压到 9/16 傍晚，揭阳老城砍掉或改夜游。"
+   },
+   {
+    "name": "韩文公祠（潮州 · 免费需预约）",
+    "lat": 23.663533,
+    "lng": 116.65904,
+    "type": "spot",
+    "time": "—",
+    "desc": "纪念韩愈，潮州必看人文点，需提前预约",
+    "xhsKeyword": "潮州 韩文公祠 预约"
+   },
+   {
+    "name": "潮州西湖公园 + 西湖美食街",
+    "lat": 23.671471,
+    "lng": 116.641877,
+    "type": "spot",
+    "time": "—",
+    "desc": "潮州糜+杂咸大本营；谢怀亮芝麻茶/炸豆腐在附近"
+   },
+   {
+    "name": "黄岐山森林公园（揭阳）",
+    "lat": 23.582451,
+    "lng": 116.372586,
+    "type": "spot",
+    "time": "—",
+    "desc": "可俯瞰揭阳全景，免费"
+   },
+   {
+    "name": "龙湖古寨 / 己略黄公祠 / 许驸马府",
+    "lat": 23.6,
+    "lng": 116.6,
+    "type": "spot",
+    "time": "—",
+    "desc": "潮州郊区或深人文，2.5 天排不进"
+   },
+   {
+    "name": "揭西黄满寨瀑布 / 普宁德安里 / 三山国王祖庙 / 惠来石笋",
+    "lat": 23.43,
+    "lng": 115.85,
+    "type": "spot",
+    "time": "—",
+    "desc": "属「另一次旅行」，跨度大（揭阳西部/南部），硬塞会毁掉整段行程"
+   },
+   {
+    "name": "住潮州方案（省 1 h 车程）",
+    "lat": 23.6645,
+    "lng": 116.6508,
+    "type": "hotel",
+    "time": "—",
+    "desc": "推荐牌坊街/广济楼附近民宿，看灯光秀后步行回房"
+   }
+  ]
+ }
+];
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  REPLACE THIS SECTION — Overview tab content                ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+function overviewContent() {
+  return `
+<div class="hero"><h1>潮汕 2.5 天 · 揭阳进出</h1><p class="subtitle">9/15 夜落地 → 9/17 返程｜揭阳老城 · 潮州古城 · 汕头开埠区</p></div>
+<div class="info-grid">
+  <div class="info-card"><div class="label">住宿</div><div class="value">揭阳城际酒店<br><span style="font-weight:400;color:#86868b">临江北路宝德时代广场</span></div></div>
+  <div class="info-card"><div class="label">航班</div><div class="value">9/15 20:55 落地 SWA<br><span style="font-weight:400;color:#86868b">机场大巴已收班 · 需打车 33 min</span></div></div>
+  <div class="info-card"><div class="label">路线骨架</div><div class="value">揭阳 半天 → 潮州 半天 → 汕头 一天</div></div>
+  <div class="info-card"><div class="label">车费预估</div><div class="value">约 ¥450–600 / 2 天<br><span style="font-weight:400;color:#86868b">全程打车，三市无地铁</span></div></div>
+</div>
+<div class="section-head">行程概览</div>
+<div class="day-list">${DAYS.slice(1).map(d=>`<div class="card" onclick="go(${d.id})"><div class="name"><span class="dot" style="background:${d.color}"></span>${d.label} · ${d.title}</div><div class="desc">${d.date}</div></div>`).join('')}</div>
+<div class="section-head">关键实测（高德驾车）</div>
+<div class="pay-summary">
+<h4>车程</h4>
+机场→酒店 19.6 km / 33 min<br>
+酒店→进贤门 5.9 km / 16 min<br>
+酒店→潮州广济桥 34 km / 59 min<br>
+潮州广济桥→汕头小公园 52 km / 58 min<br>
+汕头小公园→揭阳机场 39.6 km / 48 min<br>
+潮州古城→潮汕站 18.7 km / 39 min
+</div>
+<div class="section-head">提醒</div>
+<div class="pay-summary">
+<h4>时间硬约束</h4>
+· 揭阳学宫 9:00–11:30 / 14:30–17:30，<span class="warn">中午闭馆</span><br>
+· 广济桥三套时间窗：上桥 / 拆桥（约 16:30–17:30，随季节）/ 灯光秀 20:00（周三仅此一场）<br>
+· <span class="warn">机场大巴晚上收班</span>（揭阳古城线 08:30–15:30），20:55 落地只能打车<br>
+· 韩文公祠<span class="ok-text">免费需预约</span>；三市无地铁，公交班次少收班早 → 建议全程打车
+</div>
+<div class="section-head">图例</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--tint-red)"></div>餐厅</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--tint-blue)"></div>景点</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--tint-purple)"></div>饮品/其他</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--tint-orange)"></div>酒店</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#aeaeb2"></div>交通</div>
+</div>`;
+}
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  ENGINE — Do not modify below unless customizing behavior   ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+const map = L.map('map', { center: [HOTEL.lat || 35.69, HOTEL.lng || 139.74], zoom: 12, zoomControl: false, attributionControl: true });
+L.control.zoom({ position: 'topright' }).addTo(map);
+L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', { subdomains: '1234', maxZoom: 18 }).addTo(map);
+
+/* ── Geolocation ── */
+const LocateControl = L.Control.extend({
+  options: { position: 'bottomright' },
+  onAdd() {
+    const btn = L.DomUtil.create('button', 'locate-btn');
+    btn.innerHTML = '📍';
+    btn.title = '我的位置';
+    L.DomEvent.disableClickPropagation(btn);
+    btn.addEventListener('click', () => {
+      btn.classList.add('active');
+      map.locate({ setView: true, maxZoom: 15 });
+    });
+    this._btn = btn;
+    return btn;
+  }
+});
+new LocateControl().addTo(map);
+let locMarker, locCircle;
+map.on('locationfound', e => {
+  const r = e.accuracy / 2;
+  if (locMarker) { locMarker.setLatLng(e.latlng); locCircle.setLatLng(e.latlng).setRadius(r); }
+  else {
+    locMarker = L.marker(e.latlng, {
+      icon: L.divIcon({ className:'', html:'<div style="width:14px;height:14px;border-radius:50%;background:#007aff;border:2.5px solid #fff;box-shadow:0 0 6px rgba(0,122,255,.5)"></div><div class="loc-pulse" style="position:absolute;top:0;left:0"></div>', iconSize:[14,14], iconAnchor:[7,7] }),
+      zIndexOffset: 2000
+    }).addTo(map);
+    locCircle = L.circle(e.latlng, { radius: r, color: '#007aff', fillColor: '#007aff', fillOpacity: .08, weight: 1 }).addTo(map);
+  }
+});
+map.on('locationerror', () => {});
+
+function icon(color, emoji) {
+  return L.divIcon({ className: '', html: `<div style="width:28px;height:28px;border-radius:50%;background:${color};border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.18)">${emoji||''}</div>`, iconSize: [28,28], iconAnchor: [14,14], popupAnchor: [0,-16] });
+}
+
+if (HOTEL.lat) L.marker([HOTEL.lat, HOTEL.lng], { icon: icon('#ff9500','🏨'), zIndexOffset: 1000 }).addTo(map).bindPopup(`<b>${HOTEL.name}</b>`);
+
+let markers = [], polylines = [];
+const emojis = { food:'🍽️', spot:'📍', hotel:'🏨', transport:'🚃', drink:'🍺' };
+
+function clearMap() { markers.forEach(m=>map.removeLayer(m)); polylines.forEach(p=>map.removeLayer(p)); markers=[]; polylines=[]; }
+
+function showDay(idx) {
+  clearMap();
+  if (idx === 0) {
+    const pts = [];
+    DAYS.forEach(d => d.locations.forEach(l => { if(l.lat) pts.push([l.lat,l.lng]); }));
+    if(pts.length) map.fitBounds(pts, {padding:[30,30]});
+    DAYS.slice(1).forEach(d => {
+      d.locations.filter(l=>l.time!=='—').forEach(l => {
+        const m = L.circleMarker([l.lat,l.lng], { radius:4, fillColor:d.color, color:'#fff', weight:1.5, fillOpacity:.9 }).addTo(map).bindPopup(`<b>${l.name}</b><br><span style="color:#86868b">${d.label}</span>`);
+        markers.push(m);
+      });
+    });
+    return;
+  }
+  const day = DAYS.find(d=>d.id===idx);
+  if(!day) return;
+  const coords = [];
+  day.locations.forEach(l => {
+    if(!l.lat) return;
+    const m = L.marker([l.lat,l.lng], { icon: icon(day.color, emojis[l.type]||'📌') }).addTo(map);
+    const gmapQ = l.gmap||encodeURIComponent(l.name+' Tokyo');
+    m.bindPopup(`<b>${l.name}</b>${l.time!=='—'?'<br><span style="color:#86868b">'+l.time+'</span>':''}<br>${l.desc}${l.budget?'<br><span style="color:#ff9500">'+l.budget+'</span>':''}<br><a href="#" onclick="event.preventDefault();openAS('${l.name.replace(/'/g,"\\'")}',${l.lat},${l.lng},'${gmapQ}')">📍 导航</a>${l.xhs?' · <a href="'+l.xhs+'" target="_blank">📕 小红书</a>':''}`);
+    markers.push(m);
+    if(l.time!=='—') coords.push([l.lat,l.lng]);
+  });
+  if(coords.length>1) { const pl = L.polyline(coords, { color:day.color, weight:2.5, opacity:.5, dashArray:'6,5' }).addTo(map); polylines.push(pl); }
+  if(coords.length) map.fitBounds(coords, { padding:[40,40], maxZoom:14 });
+}
+
+// ══════════ RENDER ══════════
+function payChips(pay) {
+  if(!pay) return '';
+  let h = '<div class="pays">';
+  const m = { cash:'💴', card:'💳', suica:'Suica', paypay:'PayPay', alipay:'支付宝', wechat:'微信' };
+  for(const [k,label] of Object.entries(m)) {
+    if(pay[k]!==undefined) { const c = pay[k]===1?'ok':pay[k]===0.5?'idk':'no'; h += `<span class="pay ${c}">${label}</span>`; }
+  }
+  return h+'</div>';
+}
+
+// ── 运行环境检测：在第三方 App 的 WebView 里，自定义 scheme 基本会被拦截 ──
+const IN_APP_WEBVIEW = (() => {
+  const ua = (navigator.userAgent || '').toLowerCase();
+  return /micromessenger|xhs|xhsdiscover|discover\/|tiktok|aweme|weibo|qq\/|qqbrowser|alipayclient|dingtalk|lark|feishu|ucbrowser|baiduboxapp|toutiao|newsarticle/.test(ua);
+})();
+
+function xhsKeyword(loc) {
+  if(loc.xhsKeyword) return loc.xhsKeyword.trim();
+  return (loc.name||'').replace(/⭐.*$/g,'').replace(/（.*?）/g,'').replace(/\(.*?\)/g,'').replace(/\s+/g,' ').trim();
+}
+function xhsAppUrl(loc) { return `xhsdiscover://search/result?keyword=${encodeURIComponent(xhsKeyword(loc))}&target_search=notes&source=deeplink`; }
+function xhsWebUrl(loc) { return `https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(xhsKeyword(loc))}&source=web_explore_feed`; }
+
+function dpKeyword(loc) {
+  if(loc.dianpingKeyword) return loc.dianpingKeyword.trim();
+  return (loc.name||'').replace(/⭐.*$/g,'').replace(/（.*?）/g,'').replace(/\(.*?\)/g,'').replace(/\s+/g,' ').trim();
+}
+function dpAppUrl(loc) { return `dianping://searchshoplist?keyword=${encodeURIComponent(dpKeyword(loc))}`; }
+function dpWebUrl(loc) { return `https://m.dianping.com/searchshop?keyword=${encodeURIComponent(dpKeyword(loc))}`; }
+
+window._extLocs = {};
+DAYS.forEach(d => d.locations.forEach(l => { window._extLocs[`${d.id}::${l.name}`] = l; }));
+window._xhsLocs = window._extLocs;
+
+function openExt(key, kind) {
+  const loc = window._extLocs[key]; if(!loc) return false;
+  if (IN_APP_WEBVIEW) {
+    window.location.href = kind==='dp' ? dpWebUrl(loc) : xhsWebUrl(loc);
+  } else {
+    window.location.href = kind==='dp' ? dpAppUrl(loc) : xhsAppUrl(loc);
+  }
+  return false;
+}
+function openXhs(key) { return openExt(key, 'xhs'); }
+function openDp(key)  { return openExt(key, 'dp'); }
+
+function locCard(loc, dayIdx) {
+  const dot = loc.type==='food'?'food':loc.type==='spot'?'spot':loc.type==='drink'?'drink':loc.type==='hotel'?'hotel':'transport';
+  const bdg = loc.type==='food'?'<span class="badge food">餐</span>':loc.type==='spot'?'<span class="badge spot">景</span>':loc.type==='drink'?'<span class="badge drink">饮</span>':'';
+  const uid = `d${dayIdx}-${loc.name.replace(/\W/g,'')}`;
+  const locKey = `${dayIdx}::${loc.name}`;
+  const gmapQ = loc.gmap||encodeURIComponent(loc.name+' Tokyo');
+  let lnk = `<button class="btn nav" onclick="openAS('${loc.name.replace(/'/g,"\\'")}',${loc.lat},${loc.lng},'${gmapQ}')">📍 导航</button>`;
+  if(loc.xhs||loc.xhsKeyword) {
+    const xhsHref = IN_APP_WEBVIEW ? xhsWebUrl(loc) : xhsAppUrl(loc);
+    const xhsLabel = IN_APP_WEBVIEW ? '📕 小红书' : '📕 小红书 App';
+    lnk += `<a href="${xhsHref}" onclick="return openXhs('${locKey.replace(/'/g,"\\'")}')" class="btn xhs">${xhsLabel}</a>`;
+  }
+  const dpEnabled = loc.dianping !== false &&
+    (loc.dianping || loc.dianpingKeyword || loc.type==='food' || loc.type==='drink');
+  if(dpEnabled) {
+    const dpHref = IN_APP_WEBVIEW ? dpWebUrl(loc) : dpAppUrl(loc);
+    const dpLabel = IN_APP_WEBVIEW ? '🍜 大众点评' : '🍜 大众点评 App';
+    lnk += `<a href="${dpHref}" onclick="return openDp('${locKey.replace(/'/g,"\\'")}')" class="btn dp">${dpLabel}</a>`;
+  }
+  if(loc.reserve) lnk += `<a href="${loc.reserve}" target="_blank" class="btn rsv">📅 预约</a>`;
+  return `<div class="tl-item"><div class="tl-dot ${dot}"></div><div class="card" onclick="if(!event.target.closest('.btn,.links'))toggle('${uid}')"><div class="time">${loc.time!=='—'?loc.time:'备选'}</div><div class="name">${bdg} ${loc.name}</div><div class="desc">${loc.desc}</div>${loc.budget?'<div class="budget">'+loc.budget+'</div>':''}${payChips(loc.pay)}<div class="links">${lnk}</div>${loc.detail?'<div class="details" id="'+uid+'">'+loc.detail.replace(/\n/g,'<br>')+'</div>':''}</div></div>`;
+}
+
+function renderDay(idx) {
+  const d = DAYS.find(x=>x.id===idx); if(!d) return '';
+  const main = d.locations.filter(l=>l.time!=='—');
+  const alt = d.locations.filter(l=>l.time==='—');
+  let h = `<div class="day-head"><h2>${d.title}</h2><p>${d.date}</p></div>`;
+  if(main.length) { h += '<div class="section-head">行程</div><div class="timeline">'; main.forEach(l => h += locCard(l, idx)); h += '</div>'; }
+  if(alt.length) { h += '<div class="section-head">备选</div><div class="timeline">'; alt.forEach(l => h += locCard(l, idx)); h += '</div>'; }
+  return h;
+}
+
+// ══════════ NAV ══════════
+let cur = 0;
+const tabsEl = document.getElementById('tabs');
+const contentEl = document.getElementById('content');
+
+DAYS.forEach(d => {
+  const btn = document.createElement('button');
+  btn.className = 'tab' + (d.id===0?' active':'');
+  btn.dataset.day = d.id;
+  btn.textContent = d.label;
+  tabsEl.appendChild(btn);
+});
+
+function go(idx) {
+  cur = idx;
+  tabsEl.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', +t.dataset.day===idx));
+  contentEl.innerHTML = idx===0 ? overviewContent() : renderDay(idx);
+  showDay(idx);
+  contentEl.scrollTo({top:0});
+  const tab = tabsEl.querySelector(`[data-day="${idx}"]`);
+  if(tab) tab.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+}
+
+function toggle(id) { const el=document.getElementById(id); if(el) el.classList.toggle('closed'); }
+
+tabsEl.addEventListener('click', e => { const t=e.target.closest('.tab'); if(t) go(+t.dataset.day); });
+
+go(0);
+
+/* ── Action Sheet for Navigation ── */
+const asOverlay = document.createElement('div');
+asOverlay.className = 'as-overlay';
+asOverlay.innerHTML = `<div class="as-sheet">
+  <div class="as-group" id="as-opts"></div>
+  <div class="as-group"><button class="as-item as-cancel" onclick="closeAS()">取消</button></div>
+</div>`;
+document.body.appendChild(asOverlay);
+asOverlay.addEventListener('click', e => { if (e.target === asOverlay) closeAS(); });
+
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+function amapAppUrl(name, lat, lng) {
+  const scheme = IS_IOS ? 'iosamap' : 'androidamap';
+  return `${scheme}://viewMap?sourceApplication=trip&poiname=${encodeURIComponent(name)}&lat=${lat}&lon=${lng}&dev=0`;
+}
+function amapWebUrl(name, lat, lng) {
+  return `https://uri.amap.com/marker?position=${lng},${lat}&name=${encodeURIComponent(name)}&src=trip&coordinate=gcj02&callnative=1`;
+}
+function openAmap(name, lat, lng) {
+  if (IN_APP_WEBVIEW) { window.open(amapWebUrl(name, lat, lng)); return; }
+  window.location.href = amapAppUrl(name, lat, lng);
+}
+
+function openAS(name, lat, lng, gmap) {
+  const q = gmap || encodeURIComponent(name + ' 潮汕');
+  const encName = encodeURIComponent(name);
+  const safeName = name.replace(/'/g,"\\'");
+  // WebView 内 maps:// 通常被拦截，改用 https Apple Maps URL —— iOS 系统会自动拉起 Apple Maps
+  const appleUrl = IN_APP_WEBVIEW
+    ? `https://maps.apple.com/?q=${lat},${lng}&ll=${lat},${lng}&name=${encName}`
+    : `maps://maps.apple.com/?q=${lat},${lng}&name=${encName}`;
+  const googleUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+  document.getElementById('as-opts').innerHTML =
+    `<button class="as-item" onclick="window.open('${appleUrl}');closeAS()">🍎 Apple Maps</button>` +
+    `<button class="as-item" onclick="window.open('${googleUrl}');closeAS()">🗺️ Google Maps</button>` +
+    `<button class="as-item" onclick="openAmap('${safeName}',${lat},${lng});closeAS()">🧭 高德地图 App</button>`;
+  asOverlay.classList.add('show');
+}
+function closeAS() { asOverlay.classList.remove('show'); }
+</script>
+</body>
+</html>
